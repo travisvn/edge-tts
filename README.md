@@ -52,6 +52,37 @@ for await (const chunk of communicate.stream()) {
 await fs.writeFile('output.mp3', Buffer.concat(buffers));
 ```
 
+### Isomorphic API (Universal - works in Node.js and browsers)
+
+```typescript
+import { IsomorphicCommunicate } from '@travisvn/edge-tts';
+
+// Works in both Node.js and browsers (subject to CORS policy)
+const communicate = new IsomorphicCommunicate('Hello, universal world!', {
+  voice: 'en-US-EmmaMultilingualNeural',
+});
+
+const audioChunks: Buffer[] = [];
+for await (const chunk of communicate.stream()) {
+  if (chunk.type === 'audio' && chunk.data) {
+    audioChunks.push(chunk.data);
+  }
+}
+
+// Environment-specific handling
+const isNode = typeof process !== 'undefined' && process.versions?.node;
+if (isNode) {
+  // Node.js - save to file
+  const fs = await import('fs/promises');
+  await fs.writeFile('output.mp3', Buffer.concat(audioChunks));
+} else {
+  // Browser - create audio element
+  const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+  const audioUrl = URL.createObjectURL(audioBlob);
+  // Use audioUrl with <audio> element
+}
+```
+
 ## Usage Examples
 
 <details>
@@ -229,11 +260,18 @@ The main exports of the package are:
 - **`listVoices`** - A function to get all available voices
 - **`SubMaker`** - A utility to generate SRT subtitles from `WordBoundary` events
 
+**Isomorphic (Universal) API:**
+
+- **`IsomorphicCommunicate`** - Universal TTS class that works in Node.js and browsers
+- **`IsomorphicVoicesManager`** - Universal voice management with environment detection
+- **`listVoicesIsomorphic`** - Universal voice listing using cross-fetch
+- **`IsomorphicDRM`** - Cross-platform security token generation
+
 **Common:**
 
 - **Exception classes** - `NoAudioReceived`, `WebSocketError`, etc.
 - **TypeScript types** - Complete type definitions for voices, options, and stream chunks
 
-Both APIs use the same robust infrastructure including **DRM security handling**, error recovery, proxy support, and all Microsoft Edge authentication features.
+All three APIs use the same robust infrastructure including **DRM security handling**, error recovery, proxy support, and all Microsoft Edge authentication features. The isomorphic API provides universal compatibility through environment detection and isomorphic packages.
 
 For detailed documentation, examples, and advanced usage patterns, see the [comprehensive API guide](./API.md).

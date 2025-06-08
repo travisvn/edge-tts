@@ -54,7 +54,7 @@ await fs.writeFile('output.mp3', Buffer.concat(buffers));
 
 ## API Styles
 
-This package provides two API styles to suit different use cases:
+This package provides three API styles to suit different use cases:
 
 ### Simple API
 
@@ -106,7 +106,51 @@ for await (const chunk of communicate.stream()) {
 }
 ```
 
-**Note:** Both APIs use the same robust infrastructure including DRM handling, error recovery, proxy support, and security features.
+### Isomorphic (Universal) API
+
+**Best for:** Cross-platform applications, libraries, universal modules that need to work in both Node.js and browsers
+
+The Isomorphic API provides a universal interface that automatically detects the environment and uses appropriate implementations:
+
+```typescript
+import {
+  IsomorphicCommunicate,
+  IsomorphicVoicesManager,
+  listVoicesIsomorphic,
+} from '@travisvn/edge-tts';
+
+// Works in both Node.js and browsers (subject to CORS policy)
+const communicate = new IsomorphicCommunicate('Hello, universal world!', {
+  voice: 'en-US-EmmaMultilingualNeural',
+  rate: '+10%',
+});
+
+// Environment detection happens automatically
+for await (const chunk of communicate.stream()) {
+  if (chunk.type === 'audio') {
+    // Process audio chunks universally
+    console.log(`Audio chunk: ${chunk.data?.length} bytes`);
+  } else if (chunk.type === 'WordBoundary') {
+    // Handle word timing events
+    console.log(`Word: "${chunk.text}" at ${chunk.offset}ms`);
+  }
+}
+
+// Universal voice management
+const voicesManager = await IsomorphicVoicesManager.create();
+const englishVoices = voicesManager.find({ Language: 'en' });
+```
+
+**Key Features:**
+
+- **Environment Detection**: Automatically uses Node.js crypto vs Web Crypto API
+- **Universal WebSocket**: Uses `isomorphic-ws` for consistent WebSocket handling
+- **Cross-Platform Fetch**: Uses `cross-fetch` instead of axios for broader compatibility
+- **Buffer Polyfill**: Consistent binary data handling across environments
+- **Proxy Support**: Works in Node.js, graceful fallback in browsers
+- **Same API Surface**: Identical interface regardless of environment
+
+**Note:** All three APIs use the same robust infrastructure including DRM handling, error recovery, proxy support, and security features.
 
 ## Core Classes
 
@@ -426,6 +470,113 @@ console.log(srt);
 // is a test.
 ```
 
+### IsomorphicCommunicate
+
+Universal version of the Communicate class that works in both Node.js and browsers.
+
+#### Constructor
+
+```typescript
+new IsomorphicCommunicate(text: string, options?: IsomorphicCommunicateOptions)
+```
+
+**Parameters:**
+
+- `text` (string): The text to synthesize
+- `options` (IsomorphicCommunicateOptions, optional): Configuration options
+
+#### IsomorphicCommunicateOptions
+
+```typescript
+interface IsomorphicCommunicateOptions {
+  voice?: string; // Voice to use (default: "en-US-EmmaMultilingualNeural")
+  rate?: string; // Speech rate (e.g., "+20%", "-10%")
+  volume?: string; // Volume level (e.g., "+50%", "-25%")
+  pitch?: string; // Pitch adjustment (e.g., "+5Hz", "-10Hz")
+  proxy?: string; // Proxy URL (Node.js only)
+  connectionTimeout?: number; // WebSocket timeout in ms
+}
+```
+
+#### Methods
+
+##### stream()
+
+```typescript
+async *stream(): AsyncGenerator<TTSChunk, void, unknown>
+```
+
+Returns an async generator that yields audio chunks and word boundary events. Works identically across Node.js and browsers.
+
+**Example:**
+
+```typescript
+const communicate = new IsomorphicCommunicate('Hello world');
+
+for await (const chunk of communicate.stream()) {
+  if (chunk.type === 'audio') {
+    // Universal audio handling
+    console.log(`Audio chunk: ${chunk.data?.length} bytes`);
+  } else if (chunk.type === 'WordBoundary') {
+    // Universal word timing
+    console.log(`Word: ${chunk.text} at ${chunk.offset}ns`);
+  }
+}
+```
+
+### IsomorphicVoicesManager
+
+Universal utility class for finding and filtering available voices across environments.
+
+#### Static Methods
+
+##### create()
+
+```typescript
+static async create(customVoices?: Voice[], proxy?: string): Promise<IsomorphicVoicesManager>
+```
+
+Creates a new IsomorphicVoicesManager instance using cross-platform fetch.
+
+**Parameters:**
+
+- `customVoices` (Voice[], optional): Custom voice list instead of fetching from API
+- `proxy` (string, optional): Proxy URL (limited browser support)
+
+**Returns:** `Promise<IsomorphicVoicesManager>`
+
+**Example:**
+
+```typescript
+const voicesManager = await IsomorphicVoicesManager.create();
+// Works in both Node.js and browsers
+```
+
+#### Instance Methods
+
+##### find()
+
+```typescript
+find(filter: VoicesManagerFind): VoicesManagerVoice[]
+```
+
+Finds voices matching the specified criteria. Same interface as VoicesManager.
+
+**Example:**
+
+```typescript
+const voicesManager = await IsomorphicVoicesManager.create();
+
+// Find all English voices (universal)
+const englishVoices = voicesManager.find({ Language: 'en' });
+
+// Find female US voices (universal)
+const femaleUSVoices = voicesManager.find({
+  Gender: 'Female',
+  Locale: 'en-US',
+});
+```
+
 ## Functions
 
 ### listVoices()
@@ -522,6 +673,30 @@ console.log(srtContent);
 // 2
 // 00:00:01,200 --> 00:00:02,000
 // world
+```
+
+### listVoicesIsomorphic()
+
+```typescript
+async function listVoicesIsomorphic(proxy?: string): Promise<Voice[]>;
+```
+
+Universal version of listVoices that works in both Node.js and browsers using cross-fetch.
+
+**Parameters:**
+
+- `proxy` (string, optional): Proxy URL (limited browser support)
+
+**Returns:** `Promise<Voice[]>`
+
+**Example:**
+
+```typescript
+import { listVoicesIsomorphic } from '@travisvn/edge-tts';
+
+// Works in both Node.js and browsers
+const voices = await listVoicesIsomorphic();
+console.log(`Found ${voices.length} voices`);
 ```
 
 ## Types
@@ -895,6 +1070,72 @@ async function processMultipleTexts(texts: string[], voice: string) {
   }
 
   return results;
+}
+```
+
+### Isomorphic (Universal) Usage
+
+```typescript
+import {
+  IsomorphicCommunicate,
+  IsomorphicVoicesManager,
+  listVoicesIsomorphic,
+} from '@travisvn/edge-tts';
+
+async function universalExample() {
+  console.log('🌐 Running universal TTS example...');
+
+  try {
+    // Universal voice listing
+    const voices = await listVoicesIsomorphic();
+    console.log(`✅ Found ${voices.length} voices`);
+
+    // Universal voice management
+    const voicesManager = await IsomorphicVoicesManager.create();
+    const englishVoices = voicesManager.find({ Language: 'en' });
+    console.log(`✅ Found ${englishVoices.length} English voices`);
+
+    // Universal TTS synthesis
+    const communicate = new IsomorphicCommunicate(
+      'Hello from the universal edge-tts API!',
+      {
+        voice: 'en-US-EmmaMultilingualNeural',
+        rate: '+10%',
+      }
+    );
+
+    const audioChunks: Buffer[] = [];
+    let wordCount = 0;
+
+    for await (const chunk of communicate.stream()) {
+      if (chunk.type === 'audio' && chunk.data) {
+        audioChunks.push(chunk.data);
+        console.log(`🔊 Audio chunk: ${chunk.data.length} bytes`);
+      } else if (chunk.type === 'WordBoundary') {
+        wordCount++;
+        console.log(`📝 Word ${wordCount}: "${chunk.text}"`);
+      }
+    }
+
+    // Environment-specific handling
+    const isNode = typeof process !== 'undefined' && process.versions?.node;
+
+    if (isNode) {
+      // Node.js - save to file
+      const fs = await import('fs/promises');
+      await fs.writeFile('universal-output.mp3', Buffer.concat(audioChunks));
+      console.log('💾 Node.js: Audio saved to file');
+    } else {
+      // Browser - create audio element
+      const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      console.log(`🌐 Browser: Audio Blob created (${audioBlob.size} bytes)`);
+    }
+
+    console.log(`✅ Universal synthesis complete!`);
+  } catch (error) {
+    console.error('❌ Universal TTS Error:', error);
+  }
 }
 ```
 

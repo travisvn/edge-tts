@@ -16,6 +16,9 @@ export default defineConfig({
     'https-proxy-agent',
     'uuid',
     'ws',
-    'xml-escape'
+    'xml-escape',
+    'isomorphic-ws',
+    'cross-fetch',
+    'buffer'
   ]
 }) 

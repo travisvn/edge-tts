@@ -1,6 +1,6 @@
 {
   "name": "@travisvn/edge-tts",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Use Microsoft Edge's online text-to-speech service in Node.js WITHOUT needing Microsoft Edge or Windows or an API key",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -25,7 +25,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "docs": "typedoc",
-    "docs:serve": "typedoc --watch --serve",
+    "docs:serve": "typedoc --watch",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -41,7 +41,11 @@
   },
   "dependencies": {
     "axios": "^1.4.0",
+    "buffer": "^6.0.3",
+    "cross-fetch": "^4.1.0",
     "https-proxy-agent": "^7.0.6",
+    "isomorphic-webcrypto": "^2.3.8",
+    "isomorphic-ws": "^5.0.0",
     "uuid": "^11.1.0",
     "ws": "^8.13.0",
     "xml-escape": "^1.1.0"
