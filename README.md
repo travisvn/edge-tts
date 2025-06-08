@@ -6,23 +6,42 @@ This package provides high fidelity to the original, replicating the specific he
 
 ## Installation
 
-To install the package, use npm or yarn:
-
 ```bash
 npm install @travisvn/edge-tts
 # or
 yarn add @travisvn/edge-tts
 ```
 
-## Usage
+## Quick Start
 
-### Basic Usage (Saving to a file)
+```typescript
+import { Communicate } from '@travisvn/edge-tts';
+import fs from 'fs/promises';
+
+const communicate = new Communicate('Hello, world!', {
+  voice: 'en-US-EmmaMultilingualNeural',
+});
+
+const buffers: Buffer[] = [];
+for await (const chunk of communicate.stream()) {
+  if (chunk.type === 'audio' && chunk.data) {
+    buffers.push(chunk.data);
+  }
+}
+
+await fs.writeFile('output.mp3', Buffer.concat(buffers));
+```
+
+## Usage Examples
+
+<details>
+<summary><strong>📁 Basic Usage (Saving to a file)</strong></summary>
 
 Here is a simple example of how to save synthesized speech to an MP3 file.
 
 ```typescript
 // examples/simple.ts
-import { Communicate, listVoices } from '@travisvn/edge-tts';
+import { Communicate } from '@travisvn/edge-tts';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -34,21 +53,15 @@ const OUTPUT_FILE = path.join(__dirname, 'test.mp3');
 async function main() {
   const communicate = new Communicate(TEXT, { voice: VOICE });
 
-  // The stream() method returns an async generator that yields audio chunks.
-  const audioStream = communicate.stream();
-
-  // Pipe the audio data to a file.
-  const fileStream = fs.open(OUTPUT_FILE, 'w');
-
-  try {
-    for await (const chunk of audioStream) {
-      if (chunk.type === 'audio') {
-        await (await fileStream).write(chunk.data);
-      }
+  const buffers: Buffer[] = [];
+  for await (const chunk of communicate.stream()) {
+    if (chunk.type === 'audio' && chunk.data) {
+      buffers.push(chunk.data);
     }
-  } finally {
-    (await fileStream).close();
   }
+
+  const finalBuffer = Buffer.concat(buffers);
+  await fs.writeFile(OUTPUT_FILE, finalBuffer);
 
   console.log(`Audio saved to ${OUTPUT_FILE}`);
 }
@@ -56,9 +69,12 @@ async function main() {
 main().catch(console.error);
 ```
 
-### Listing Voices
+</details>
 
-You can list all available voices and their attributes.
+<details>
+<summary><strong>🎤 Listing and Finding Voices</strong></summary>
+
+You can list all available voices and filter them by criteria.
 
 ```typescript
 // examples/listVoices.ts
@@ -74,7 +90,7 @@ async function main() {
     voices.map((v) => v.ShortName)
   );
 
-  // Find a specific voice
+  // Find female US voices
   const femaleUsVoices = voicesManager.find({
     Gender: 'Female',
     Locale: 'en-US',
@@ -88,9 +104,12 @@ async function main() {
 main().catch(console.error);
 ```
 
-### Streaming with Subtitles (WordBoundary events)
+</details>
 
-The `stream()` method also provides `WordBoundary` events, which can be used to generate subtitles.
+<details>
+<summary><strong>📺 Streaming with Subtitles (WordBoundary events)</strong></summary>
+
+The `stream()` method provides `WordBoundary` events for generating subtitles.
 
 ```typescript
 // examples/streaming.ts
@@ -104,9 +123,8 @@ async function main() {
   const subMaker = new SubMaker();
 
   for await (const chunk of communicate.stream()) {
-    if (chunk.type === 'audio') {
+    if (chunk.type === 'audio' && chunk.data) {
       // Do something with the audio data, e.g., stream it to a client.
-      // For this example, we'll just log its size.
       console.log(`Received audio chunk of size: ${chunk.data.length}`);
     } else if (chunk.type === 'WordBoundary') {
       subMaker.feed(chunk);
@@ -121,13 +139,19 @@ async function main() {
 main().catch(console.error);
 ```
 
-## API
+</details>
+
+## API Reference
+
+📖 **[Complete API Documentation →](./API.md)**
 
 The main exports of the package are:
 
-- `Communicate`: The core class for TTS synthesis.
-- `VoicesManager`: A class to find and filter voices.
-- `listVoices`: A function to get all available voices.
-- `SubMaker`: A utility to generate SRT subtitles from `WordBoundary` events.
-- Various exception classes (e.g., `NoAudioReceived`, `WebSocketError`).
-- TypeScript types for voices, options, and stream chunks.
+- **`Communicate`** - The core class for TTS synthesis
+- **`VoicesManager`** - A class to find and filter voices
+- **`listVoices`** - A function to get all available voices
+- **`SubMaker`** - A utility to generate SRT subtitles from `WordBoundary` events
+- **Exception classes** - `NoAudioReceived`, `WebSocketError`, etc.
+- **TypeScript types** - Complete type definitions for voices, options, and stream chunks
+
+For detailed documentation, examples, and advanced usage patterns, see the [comprehensive API guide](./API.md).
