@@ -17,6 +17,23 @@ yarn add @travisvn/edge-tts
 
 ## Quick Start
 
+### Simple API (Recommended for most use cases)
+
+```typescript
+import { EdgeTTS } from '@travisvn/edge-tts';
+import fs from 'fs/promises';
+
+// Simple one-shot synthesis
+const tts = new EdgeTTS('Hello, world!', 'en-US-EmmaMultilingualNeural');
+const result = await tts.synthesize();
+
+// Save audio file
+const audioBuffer = Buffer.from(await result.audio.arrayBuffer());
+await fs.writeFile('output.mp3', audioBuffer);
+```
+
+### Advanced Streaming API (For real-time processing)
+
 ```typescript
 import { Communicate } from '@travisvn/edge-tts';
 import fs from 'fs/promises';
@@ -38,12 +55,62 @@ await fs.writeFile('output.mp3', Buffer.concat(buffers));
 ## Usage Examples
 
 <details>
-<summary><strong>📁 Basic Usage (Saving to a file)</strong></summary>
+<summary><strong>⚡ Simple API Usage (Recommended)</strong></summary>
 
-Here is a simple example of how to save synthesized speech to an MP3 file.
+Here's how to use the simple, promise-based API for quick synthesis:
 
 ```typescript
-// examples/simple.ts
+// examples/simple-api.ts
+import { EdgeTTS, createVTT, createSRT } from '@travisvn/edge-tts';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+const TEXT = 'Hello, world! This is a test of the simple edge-tts API.';
+const VOICE = 'en-US-EmmaMultilingualNeural';
+const OUTPUT_FILE = path.join(__dirname, 'simple-test.mp3');
+
+async function main() {
+  // Create TTS instance with prosody options
+  const tts = new EdgeTTS(TEXT, VOICE, {
+    rate: '+10%',
+    volume: '+0%',
+    pitch: '+0Hz',
+  });
+
+  try {
+    // Synthesize speech (one-shot)
+    const result = await tts.synthesize();
+
+    // Save audio file
+    const audioBuffer = Buffer.from(await result.audio.arrayBuffer());
+    await fs.writeFile(OUTPUT_FILE, audioBuffer);
+
+    // Generate subtitle files
+    const vttContent = createVTT(result.subtitle);
+    const srtContent = createSRT(result.subtitle);
+
+    await fs.writeFile('subtitles.vtt', vttContent);
+    await fs.writeFile('subtitles.srt', srtContent);
+
+    console.log(`Audio saved to ${OUTPUT_FILE}`);
+    console.log(`Generated ${result.subtitle.length} word boundaries`);
+  } catch (error) {
+    console.error('Synthesis failed:', error);
+  }
+}
+
+main().catch(console.error);
+```
+
+</details>
+
+<details>
+<summary><strong>📁 Advanced Streaming Usage</strong></summary>
+
+Here is an example using the advanced streaming API for real-time processing:
+
+```typescript
+// examples/streaming.ts
 import { Communicate } from '@travisvn/edge-tts';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -150,11 +217,23 @@ main().catch(console.error);
 
 The main exports of the package are:
 
-- **`Communicate`** - The core class for TTS synthesis
+**Simple API:**
+
+- **`EdgeTTS`** - Simple, promise-based TTS class for one-shot synthesis
+- **`createVTT`** / **`createSRT`** - Utility functions for subtitle generation
+
+**Advanced API:**
+
+- **`Communicate`** - Advanced streaming TTS class for real-time processing
 - **`VoicesManager`** - A class to find and filter voices
 - **`listVoices`** - A function to get all available voices
 - **`SubMaker`** - A utility to generate SRT subtitles from `WordBoundary` events
+
+**Common:**
+
 - **Exception classes** - `NoAudioReceived`, `WebSocketError`, etc.
 - **TypeScript types** - Complete type definitions for voices, options, and stream chunks
+
+Both APIs use the same robust infrastructure including **DRM security handling**, error recovery, proxy support, and all Microsoft Edge authentication features.
 
 For detailed documentation, examples, and advanced usage patterns, see the [comprehensive API guide](./API.md).

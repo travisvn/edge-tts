@@ -6,12 +6,18 @@ A comprehensive guide to using the `@travisvn/edge-tts` package for text-to-spee
 
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [API Styles](#api-styles)
+  - [Simple API](#simple-api)
+  - [Advanced Streaming API](#advanced-streaming-api)
 - [Core Classes](#core-classes)
+  - [EdgeTTS (Simple API)](#edgetts-simple-api)
   - [Communicate](#communicate)
   - [VoicesManager](#voicesmanager)
   - [SubMaker](#submaker)
 - [Functions](#functions)
   - [listVoices](#listvoices)
+  - [createVTT](#createvtt)
+  - [createSRT](#createsrt)
 - [Types](#types)
 - [Exceptions](#exceptions)
 - [Advanced Usage](#advanced-usage)
@@ -46,7 +52,149 @@ for await (const chunk of communicate.stream()) {
 await fs.writeFile('output.mp3', Buffer.concat(buffers));
 ```
 
+## API Styles
+
+This package provides two API styles to suit different use cases:
+
+### Simple API
+
+**Best for:** One-shot synthesis, simple applications, drop-in replacement scenarios
+
+The Simple API provides a straightforward, promise-based interface similar to other TTS libraries:
+
+```typescript
+import { EdgeTTS, createVTT, createSRT } from '@travisvn/edge-tts';
+
+// Simple one-shot synthesis
+const tts = new EdgeTTS('Hello, world!', 'en-US-EmmaMultilingualNeural', {
+  rate: '+10%',
+  volume: '+0%',
+  pitch: '+0Hz',
+});
+
+const result = await tts.synthesize();
+console.log('Audio size:', result.audio.size, 'bytes');
+console.log('Words:', result.subtitle.length);
+
+// Generate subtitle files
+const vttSubtitles = createVTT(result.subtitle);
+const srtSubtitles = createSRT(result.subtitle);
+```
+
+### Advanced Streaming API
+
+**Best for:** Real-time processing, large texts, fine-grained control, memory efficiency
+
+The Advanced API provides streaming capabilities with real-time chunk processing:
+
+```typescript
+import { Communicate, SubMaker } from '@travisvn/edge-tts';
+
+const communicate = new Communicate('Hello, world!', {
+  voice: 'en-US-EmmaMultilingualNeural',
+  rate: '+10%',
+});
+
+for await (const chunk of communicate.stream()) {
+  if (chunk.type === 'audio') {
+    // Process audio chunks in real-time
+    console.log(`Audio chunk: ${chunk.data?.length} bytes`);
+  } else if (chunk.type === 'WordBoundary') {
+    // Handle word timing events
+    console.log(`Word: "${chunk.text}" at ${chunk.offset}ms`);
+  }
+}
+```
+
+**Note:** Both APIs use the same robust infrastructure including DRM handling, error recovery, proxy support, and security features.
+
 ## Core Classes
+
+### EdgeTTS (Simple API)
+
+A simple, promise-based TTS class that provides a familiar API for one-shot synthesis.
+
+#### Constructor
+
+```typescript
+new EdgeTTS(
+  text: string,
+  voice?: string,
+  options?: ProsodyOptions
+)
+```
+
+**Parameters:**
+
+- `text` (string): The text to synthesize
+- `voice` (string, optional): Voice to use (default: "Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)")
+- `options` (ProsodyOptions, optional): Prosody options
+
+#### ProsodyOptions
+
+```typescript
+interface ProsodyOptions {
+  rate?: string; // Speaking rate (e.g., "+10.00%", "-20.00%")
+  volume?: string; // Speaking volume (e.g., "+15.00%", "-10.00%")
+  pitch?: string; // Speaking pitch (e.g., "+20Hz", "-10Hz")
+}
+```
+
+#### Methods
+
+##### synthesize()
+
+```typescript
+async synthesize(): Promise<SynthesisResult>
+```
+
+Initiates the synthesis process and returns the complete result.
+
+**Returns:** `Promise<SynthesisResult>`
+
+#### SynthesisResult
+
+```typescript
+interface SynthesisResult {
+  audio: Blob; // Generated audio as a Blob for web use
+  subtitle: WordBoundary[]; // Word boundaries for subtitle generation
+}
+```
+
+#### WordBoundary
+
+```typescript
+interface WordBoundary {
+  offset: number; // Offset in 100-nanosecond units
+  duration: number; // Duration in 100-nanosecond units
+  text: string; // The spoken word
+}
+```
+
+**Example:**
+
+```typescript
+import { EdgeTTS, createSRT } from '@travisvn/edge-tts';
+
+const tts = new EdgeTTS(
+  'Hello, this is a test of the simple API.',
+  'en-US-EmmaMultilingualNeural',
+  { rate: '+20%', pitch: '+5Hz' }
+);
+
+try {
+  const result = await tts.synthesize();
+
+  // Use the audio (e.g., in a web audio element)
+  const audioUrl = URL.createObjectURL(result.audio);
+
+  // Generate subtitles
+  const srtContent = createSRT(result.subtitle);
+  console.log(srtContent);
+} catch (error) {
+  console.error('Synthesis failed:', error);
+}
+```
 
 ### Communicate
 
@@ -306,6 +454,76 @@ console.log(`Found ${voices.length} voices`);
 const voices = await listVoices('http://proxy:8080');
 ```
 
+### createVTT()
+
+```typescript
+function createVTT(wordBoundaries: WordBoundary[]): string;
+```
+
+Creates subtitle file content in VTT (WebVTT) format from word boundary data.
+
+**Parameters:**
+
+- `wordBoundaries` (WordBoundary[]): Array of word boundary data from Simple API
+
+**Returns:** `string` - VTT formatted subtitles
+
+**Example:**
+
+```typescript
+import { EdgeTTS, createVTT } from '@travisvn/edge-tts';
+
+const tts = new EdgeTTS('Hello world');
+const result = await tts.synthesize();
+const vttContent = createVTT(result.subtitle);
+
+console.log(vttContent);
+// Output:
+// WEBVTT
+//
+// 1
+// 00:00:00.000 --> 00:00:01.200
+// Hello
+//
+// 2
+// 00:00:01.200 --> 00:00:02.000
+// world
+```
+
+### createSRT()
+
+```typescript
+function createSRT(wordBoundaries: WordBoundary[]): string;
+```
+
+Creates subtitle file content in SRT (SubRip) format from word boundary data.
+
+**Parameters:**
+
+- `wordBoundaries` (WordBoundary[]): Array of word boundary data from Simple API
+
+**Returns:** `string` - SRT formatted subtitles
+
+**Example:**
+
+```typescript
+import { EdgeTTS, createSRT } from '@travisvn/edge-tts';
+
+const tts = new EdgeTTS('Hello world');
+const result = await tts.synthesize();
+const srtContent = createSRT(result.subtitle);
+
+console.log(srtContent);
+// Output:
+// 1
+// 00:00:00,000 --> 00:00:01,200
+// Hello
+//
+// 2
+// 00:00:01,200 --> 00:00:02,000
+// world
+```
+
 ## Types
 
 ### TTSChunk
@@ -318,6 +536,35 @@ type TTSChunk = {
   offset?: number; // Offset in 100-nanosecond units (only for WordBoundary)
   text?: string; // Word text (only for WordBoundary)
 };
+```
+
+### ProsodyOptions (Simple API)
+
+```typescript
+interface ProsodyOptions {
+  rate?: string; // Speaking rate (e.g., "+10.00%", "-20.00%")
+  volume?: string; // Speaking volume (e.g., "+15.00%", "-10.00%")
+  pitch?: string; // Speaking pitch (e.g., "+20Hz", "-10Hz")
+}
+```
+
+### WordBoundary (Simple API)
+
+```typescript
+interface WordBoundary {
+  offset: number; // Offset in 100-nanosecond units
+  duration: number; // Duration in 100-nanosecond units
+  text: string; // The spoken word
+}
+```
+
+### SynthesisResult (Simple API)
+
+```typescript
+interface SynthesisResult {
+  audio: Blob; // Generated audio as a Blob for web use
+  subtitle: WordBoundary[]; // Word boundaries for subtitle generation
+}
 ```
 
 ### Voice
@@ -494,6 +741,43 @@ for await (const chunk of communicate.stream()) {
 ```
 
 ## Examples
+
+### Simple API - Quick Synthesis
+
+```typescript
+import { EdgeTTS, createVTT, createSRT } from '@travisvn/edge-tts';
+import fs from 'fs/promises';
+
+async function quickSynthesis() {
+  // Simple one-shot synthesis
+  const tts = new EdgeTTS(
+    'Welcome to the simple edge-tts API!',
+    'en-US-EmmaMultilingualNeural',
+    { rate: '+15%', volume: '+10%' }
+  );
+
+  try {
+    const result = await tts.synthesize();
+
+    // Save audio to file
+    const audioBuffer = Buffer.from(await result.audio.arrayBuffer());
+    await fs.writeFile('simple-output.mp3', audioBuffer);
+
+    // Generate subtitle files
+    const vttContent = createVTT(result.subtitle);
+    const srtContent = createSRT(result.subtitle);
+
+    await fs.writeFile('subtitles.vtt', vttContent);
+    await fs.writeFile('subtitles.srt', srtContent);
+
+    console.log(
+      `Generated audio (${result.audio.size} bytes) and ${result.subtitle.length} word boundaries`
+    );
+  } catch (error) {
+    console.error('Synthesis failed:', error);
+  }
+}
+```
 
 ### Save to File with Error Handling
 
