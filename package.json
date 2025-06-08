@@ -1,5 +1,5 @@
 {
-  "name": "edge-tts",
+  "name": "@travisvn/edge-tts",
   "version": "1.0.0",
   "description": "Use Microsoft Edge's online text-to-speech service in Node.js WITHOUT needing Microsoft Edge or Windows or an API key",
   "main": "dist/index.js",
