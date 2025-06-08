@@ -1,5 +1,8 @@
 # edge-tts (Node.js)
 
+[![API Documentation](https://img.shields.io/badge/API-Documentation-blue)](./API.md)
+[![npm](https://img.shields.io/npm/v/@travisvn/edge-tts)](https://www.npmjs.com/package/@travisvn/edge-tts)
+
 This is a Node.js TypeScript conversion of the Python [`edge-tts`](https://github.com/rany2/edge-tts) library. It allows you to use Microsoft Edge's online text-to-speech service from within your Node.js applications.
 
 This package provides high fidelity to the original, replicating the specific headers and WebSocket communication necessary to interact with the service.
