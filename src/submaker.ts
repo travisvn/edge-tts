@@ -19,9 +19,31 @@ function formatTime(seconds: number): string {
   return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms, 3)}`;
 }
 
+/**
+ * Utility class for generating SRT subtitles from WordBoundary events.
+ * 
+ * @example
+ * ```typescript
+ * const subMaker = new SubMaker();
+ * 
+ * for await (const chunk of communicate.stream()) {
+ *   if (chunk.type === 'WordBoundary') {
+ *     subMaker.feed(chunk);
+ *   }
+ * }
+ * 
+ * const srt = subMaker.getSrt();
+ * ```
+ */
 export class SubMaker {
   private cues: Cue[] = [];
 
+  /**
+   * Adds a WordBoundary chunk to the subtitle maker.
+   * 
+   * @param msg - Must be a WordBoundary type chunk with offset, duration, and text
+   * @throws {ValueError} If chunk is not a WordBoundary with required fields
+   */
   feed(msg: TTSChunk): void {
     if (msg.type !== 'WordBoundary' || msg.offset === undefined || msg.duration === undefined || msg.text === undefined) {
       throw new ValueError("Invalid message type, expected 'WordBoundary' with offset, duration and text");
@@ -69,6 +91,11 @@ export class SubMaker {
     this.cues = newCues.map((cue, i) => ({ ...cue, index: i + 1 }));
   }
 
+  /**
+   * Returns the subtitles in SRT format.
+   * 
+   * @returns SRT formatted subtitles
+   */
   getSrt(): string {
     return this.cues.map(cue => {
       return `${cue.index}\r\n${formatTime(cue.start)} --> ${formatTime(cue.end)}\r\n${cue.content}\r\n`;

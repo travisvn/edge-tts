@@ -24,6 +24,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "docs": "typedoc",
+    "docs:serve": "typedoc --watch --serve",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -50,6 +52,7 @@
     "@types/ws": "^8.5.5",
     "@types/xml-escape": "^1.1.3",
     "tsup": "^8.5.0",
+    "typedoc": "^0.28.5",
     "typescript": "^5.1.6"
   },
   "directories": {

@@ -34,6 +34,12 @@ async function _listVoices(proxy?: string): Promise<Voice[]> {
   return data;
 }
 
+/**
+ * Fetches all available voices from the Microsoft Edge TTS service.
+ * 
+ * @param proxy - Optional proxy URL for the request
+ * @returns Promise resolving to array of available voices
+ */
 export async function listVoices(proxy?: string): Promise<Voice[]> {
   try {
     return await _listVoices(proxy);
@@ -46,10 +52,26 @@ export async function listVoices(proxy?: string): Promise<Voice[]> {
   }
 }
 
+/**
+ * Utility class for finding and filtering available voices.
+ * 
+ * @example
+ * ```typescript
+ * const voicesManager = await VoicesManager.create();
+ * const englishVoices = voicesManager.find({ Language: 'en' });
+ * ```
+ */
 export class VoicesManager {
   private voices: VoicesManagerVoice[] = [];
   private calledCreate = false;
 
+  /**
+   * Creates a new VoicesManager instance.
+   * 
+   * @param customVoices - Optional custom voice list instead of fetching from API
+   * @param proxy - Optional proxy URL for API requests
+   * @returns Promise resolving to VoicesManager instance
+   */
   public static async create(customVoices?: Voice[], proxy?: string): Promise<VoicesManager> {
     const manager = new VoicesManager();
     const voices = customVoices ?? await listVoices(proxy);
@@ -61,6 +83,13 @@ export class VoicesManager {
     return manager;
   }
 
+  /**
+   * Finds voices matching the specified criteria.
+   * 
+   * @param filter - Filter criteria for voice selection
+   * @returns Array of voices matching the filter
+   * @throws {Error} If called before create()
+   */
   public find(filter: VoicesManagerFind): VoicesManagerVoice[] {
     if (!this.calledCreate) {
       throw new Error('VoicesManager.find() called before VoicesManager.create()');

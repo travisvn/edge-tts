@@ -26,15 +26,40 @@ import { AxiosError } from 'axios';
 import { Agent } from 'https';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
+/**
+ * Configuration options for the Communicate class.
+ */
 export interface CommunicateOptions {
+  /** Voice to use for synthesis (e.g., "en-US-EmmaMultilingualNeural") */
   voice?: string;
+  /** Speech rate adjustment (e.g., "+20%", "-10%") */
   rate?: string;
+  /** Volume level adjustment (e.g., "+50%", "-25%") */
   volume?: string;
+  /** Pitch adjustment in Hz (e.g., "+5Hz", "-10Hz") */
   pitch?: string;
+  /** Proxy URL for requests */
   proxy?: string;
+  /** WebSocket connection timeout in milliseconds */
   connectionTimeout?: number;
 }
 
+/**
+ * Main class for text-to-speech synthesis using Microsoft Edge's online TTS service.
+ * 
+ * @example
+ * ```typescript
+ * const communicate = new Communicate('Hello, world!', {
+ *   voice: 'en-US-EmmaMultilingualNeural',
+ * });
+ * 
+ * for await (const chunk of communicate.stream()) {
+ *   if (chunk.type === 'audio' && chunk.data) {
+ *     // Handle audio data
+ *   }
+ * }
+ * ```
+ */
 export class Communicate {
   private readonly ttsConfig: TTSConfig;
   private readonly texts: Generator<Buffer>;
@@ -48,6 +73,12 @@ export class Communicate {
     streamWasCalled: false,
   };
 
+  /**
+   * Creates a new Communicate instance for text-to-speech synthesis.
+   * 
+   * @param text - The text to synthesize
+   * @param options - Configuration options for synthesis
+   */
   constructor(text: string, options: CommunicateOptions = {}) {
     this.ttsConfig = new TTSConfig({
       voice: options.voice || DEFAULT_VOICE,
@@ -211,6 +242,28 @@ export class Communicate {
     }
   }
 
+  /**
+   * Streams text-to-speech synthesis results.
+   * 
+   * Returns an async generator that yields audio chunks and word boundary events.
+   * Can only be called once per Communicate instance.
+   * 
+   * @yields TTSChunk - Audio data or word boundary information
+   * @throws {Error} If called more than once
+   * @throws {NoAudioReceived} If no audio data is received
+   * @throws {WebSocketError} If WebSocket connection fails
+   * 
+   * @example
+   * ```typescript
+   * for await (const chunk of communicate.stream()) {
+   *   if (chunk.type === 'audio') {
+   *     // Process audio data
+   *   } else if (chunk.type === 'WordBoundary') {
+   *     // Process subtitle timing
+   *   }
+   * }
+   * ```
+   */
   async * stream(): AsyncGenerator<TTSChunk, void, unknown> {
     if (this.state.streamWasCalled) {
       throw new Error('stream can only be called once.');
