@@ -31,7 +31,7 @@
     "tts",
     "edge-tts"
   ],
-  "author": "Travis <contact@travis.engineer>",
+  "author": "Travis <contact@travis.engineer> (https://travis.engineer)",
   "license": "AGPL-3.0",
   "homepage": "https://github.com/travisvn/edge-tts",
   "bugs": {
